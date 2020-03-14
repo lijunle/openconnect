@@ -1226,3 +1226,41 @@ retry:
 
 	return ret;
 }
+
+int process_auth_form_manually(struct openconnect_info *vpninfo, struct oc_auth_form *form)
+{
+  struct oc_form_opt *opt;
+  FILE *pipe_fp;
+  char readbuf[80];
+  char command[1024];
+  int length;
+
+  sprintf(command, "/home/lijunle/Downloads/test/dump.sh \"%s\"", form->request);
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Run command %s \n", command);
+
+  pipe_fp = popen(command, "r");
+  if (pipe_fp == NULL) {
+    perror("popen");
+    return -1;
+  }
+
+  while(fgets(readbuf, 80, pipe_fp)) {}
+  length = strlen(readbuf);
+  if (readbuf[length-1] == '\n') {
+    readbuf[length-1]  = '\0';
+  }
+
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Read buffer %s \n", readbuf);
+
+  opt = form->opts = calloc(1, sizeof(*opt));
+  opt->name = strdup("prelogin-cookie");
+  opt->type = OC_FORM_OPT_TEXT;
+  opt->_value = strdup(readbuf);
+
+  opt = opt->next = calloc(1, sizeof(*opt));
+  opt->name = strdup("user");
+  opt->type = OC_FORM_OPT_TEXT;
+  opt->_value = strdup("junlel@microsoft.com");
+
+  return 0;
+}

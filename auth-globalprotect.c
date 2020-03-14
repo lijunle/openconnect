@@ -78,6 +78,7 @@ static int parse_prelogin_xml(struct openconnect_info *vpninfo, xmlNode *xml_nod
 	char *saml_method = NULL, *saml_path = NULL;
 	int result = 0;
 
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] start parser prelogin xml\n");
 	if (!xmlnode_is_named(xml_node, "prelogin-response"))
 		goto out;
 
@@ -103,16 +104,17 @@ static int parse_prelogin_xml(struct openconnect_info *vpninfo, xmlNode *xml_nod
 			/* XX: should we save the certificate username from <ccusername/> ? */
 		}
 	}
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] finish parse SAML xml\n");
 
 	/* XX: Alt-secret form field must be specified for SAML, because we can't autodetect it */
-	if ((saml_method || saml_path) && !ctx->alt_secret) {
+	/*if ((saml_method || saml_path) && !ctx->alt_secret) {
 		vpn_progress(vpninfo, PRG_ERR, "SAML authentication via %s to %s is required.\n"
 					 "Must specify destination form field by appending :field_name to login URL.\n",
 					 saml_method, saml_path);
 		result = -EINVAL;
-	}
+	}*/
 
-	/* Replace old form */
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Replace old form\n");
 	free_auth_form(ctx->form);
 	form = ctx->form = calloc(1, sizeof(*form));
 	if (!form) {
@@ -126,8 +128,9 @@ static int parse_prelogin_xml(struct openconnect_info *vpninfo, xmlNode *xml_nod
 	form->message = prompt ? : strdup(_("Please enter your username and password"));
 	prompt = NULL;
 	form->auth_id = strdup("_login");
+	form->request = strdup(saml_path);
 
-	/* First field (username) */
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] First field (username)\n");
 	opt = form->opts = calloc(1, sizeof(*opt));
 	if (!opt)
 		goto nomem;
@@ -142,7 +145,7 @@ static int parse_prelogin_xml(struct openconnect_info *vpninfo, xmlNode *xml_nod
 		ctx->username = NULL;
 	}
 
-	/* Second field (secret) */
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Second field (secret)\n");
 	opt2 = opt->next = calloc(1, sizeof(*opt));
 	if (!opt2)
 		goto nomem;
@@ -428,12 +431,12 @@ gateways:
 			goto out;
 	}
 
-	/* process auth form to select gateway */
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] process auth form to select gateway \n");
 	result = process_auth_form(vpninfo, form);
 	if (result == OC_FORM_RESULT_CANCELLED || result < 0)
 		goto out;
 
-	/* redirect to the gateway (no-op if it's the same host) */
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] redirect to the gateway (no-op if it's the same host) \n");
 	free(vpninfo->redirect_url);
 	if (asprintf(&vpninfo->redirect_url, "https://%s", vpninfo->authgroup) == 0) {
 		result = -ENOMEM;
@@ -474,19 +477,20 @@ static int gpst_login(struct openconnect_info *vpninfo, int portal, struct login
 		free(vpninfo->urlpath);
 		vpninfo->urlpath = orig_path;
 
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] finish do https request \n");
 		if (result >= 0)
 			result = gpst_xml_or_error(vpninfo, xml_buf, parse_prelogin_xml, NULL, ctx);
 		if (result)
 			goto out;
 
 	got_form:
-		/* process auth form */
-		result = process_auth_form(vpninfo, ctx->form);
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] process auth form \n");
+		result = process_auth_form_manually(vpninfo, ctx->form);
 		if (result)
 			goto out;
 
 	replay_form:
-		/* generate token code if specified */
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] generate token code if specified \n");
 		result = do_gen_tokencode(vpninfo, ctx->form);
 		if (result) {
 			vpn_progress(vpninfo, PRG_ERR, _("Failed to generate OTP tokencode; disabling token\n"));
@@ -494,7 +498,7 @@ static int gpst_login(struct openconnect_info *vpninfo, int portal, struct login
 			goto out;
 		}
 
-		/* submit gateway login (ssl-vpn/login.esp) or portal config (global-protect/getconfig.esp) request */
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] submit gateway login (ssl-vpn/login.esp) or portal config (global-protect/getconfig.esp) request \n");
 		buf_truncate(request_body);
 		buf_append(request_body, "jnlpReady=jnlpReady&ok=Login&direct=yes&clientVer=4100&prot=https:");
 		append_opt(request_body, "ipv6-support", vpninfo->disable_ipv6 ? "no" : "yes");
@@ -512,12 +516,13 @@ static int gpst_login(struct openconnect_info *vpninfo, int portal, struct login
 
 		orig_path = vpninfo->urlpath;
 		vpninfo->urlpath = strdup(portal ? "global-protect/getconfig.esp" : "ssl-vpn/login.esp");
+		// vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Post login URL %s with body %s \n", vpninfo->urlpath, request_body->data);
 		result = do_https_request(vpninfo, "POST", request_body_type, request_body,
 					  &xml_buf, 0);
 		free(vpninfo->urlpath);
 		vpninfo->urlpath = orig_path;
 
-		/* Result could be either a JavaScript challenge or XML */
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Result could be either a JavaScript challenge or XML \n");
 		if (result >= 0)
 			result = gpst_xml_or_error(vpninfo, xml_buf, portal ? parse_portal_xml : parse_login_xml,
 									   challenge_cb, ctx);
@@ -525,13 +530,15 @@ static int gpst_login(struct openconnect_info *vpninfo, int portal, struct login
 			/* Invalid username/password; reuse same form, but blank,
 			 * unless we just did a blind retry.
 			 */
+		  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Invalid username/password \n");
 			nuke_opt_values(ctx->form->opts);
-			if (!blind_retry)
+			if (!blind_retry) {
+        vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] goto got_form \n");
 				goto got_form;
-			else
+      } else
 				blind_retry = 0;
 		} else {
-			/* Save successful username */
+		  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Save successful username \n");
 			if (!ctx->username)
 				ctx->username = strdup(ctx->form->opts->_value);
 			if (result == -EAGAIN) {
@@ -573,14 +580,15 @@ int gpst_obtain_cookie(struct openconnect_info *vpninfo)
 		ctx.alt_secret = strdup(ctx.alt_secret+1);
 	}
 
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] vpninfo->urlpath = %s\n", vpninfo->urlpath);
 	if (vpninfo->urlpath && (!strcmp(vpninfo->urlpath, "portal") || !strncmp(vpninfo->urlpath, "global-protect", 14))) {
-		/* assume the server is a portal */
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] assume the server is a portal \n");
 		result = gpst_login(vpninfo, 1, &ctx);
 	} else if (vpninfo->urlpath && (!strcmp(vpninfo->urlpath, "gateway") || !strncmp(vpninfo->urlpath, "ssl-vpn", 7))) {
-		/* assume the server is a gateway */
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] assume the server is a gateway \n");
 		result = gpst_login(vpninfo, 0, &ctx);
 	} else {
-		/* first try handling it as a gateway, then a portal */
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] first try handling it as a gateway, then a portal \n");
 		result = gpst_login(vpninfo, 0, &ctx);
 		if (result == -EEXIST) {
 			result = gpst_login(vpninfo, 1, &ctx);
@@ -588,6 +596,7 @@ int gpst_obtain_cookie(struct openconnect_info *vpninfo)
 				vpn_progress(vpninfo, PRG_ERR, _("Server is neither a GlobalProtect portal nor a gateway.\n"));
 		}
 	}
+
 	free(ctx.username);
 	free(ctx.alt_secret);
 	free_auth_form(ctx.form);

@@ -633,6 +633,7 @@ int process_http_response(struct openconnect_info *vpninfo, int connect,
 		openconnect_close_https(vpninfo, 0);
 
 	body->data[body->pos] = 0;
+  vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] HTTP body: %s \n", body->data);
 	return result;
 }
 
@@ -927,8 +928,10 @@ int do_https_request(struct openconnect_info *vpninfo, const char *method,
 	}
 	buf_append(buf, "\r\n");
 
-	if (request_body_type)
+	if (request_body_type) {
 		buf_append_bytes(buf, request_body->data, request_body->pos);
+    vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Submit request body: %s \n", request_body->data);
+  }
 
 	if (vpninfo->port == 443)
 		vpn_progress(vpninfo, PRG_INFO, "%s https://%s/%s\n",

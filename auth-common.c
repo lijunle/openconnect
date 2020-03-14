@@ -102,6 +102,7 @@ int append_form_opts(struct openconnect_info *vpninfo,
 	int ret;
 
 	for (opt = form->opts; opt; opt = opt->next) {
+		vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Append Opt %s = %s \n", opt->name, opt->_value);
 		ret = append_opt(body, opt->name, opt->_value);
 		if (ret)
 			return ret;
