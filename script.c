@@ -557,8 +557,8 @@ int script_config_tun(struct openconnect_info *vpninfo, const char *reason)
 		return -e;
 	}
 
-  vpninfo->script_tun = pid;
-  vpn_progress(vpninfo, PRG_INFO, "[LIJUNLE] script forked tun number %d \n", vpninfo->script_tun);
+  // vpninfo->script_tun = pid;
+  // vpn_progress(vpninfo, PRG_INFO, "[LIJUNLE] script forked tun number %d \n", vpninfo->script_tun);
 
 	if (!WIFEXITED(ret)) {
 		vpn_progress(vpninfo, PRG_ERR,
