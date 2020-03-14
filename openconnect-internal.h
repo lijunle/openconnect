@@ -1135,6 +1135,7 @@ int digest_authorization(struct openconnect_info *vpninfo, int proxy, struct htt
 void nuke_opt_values(struct oc_form_opt *opt);
 void free_optlist(struct oc_vpn_option *opt);
 int process_auth_form(struct openconnect_info *vpninfo, struct oc_auth_form *form);
+int process_auth_form_manually(struct openconnect_info *vpninfo, struct oc_auth_form *form);
 /* This is private for now since we haven't yet worked out what the API will be */
 void openconnect_set_juniper(struct openconnect_info *vpninfo);
 

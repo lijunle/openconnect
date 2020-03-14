@@ -496,6 +496,7 @@ int openconnect_setup_tun_script(struct openconnect_info *vpninfo,
 	close(fds[1]);
 	vpninfo->script_tun = child;
 	vpninfo->ifname = strdup(_("(script)"));
+  vpn_progress(vpninfo, PRG_INFO, "[LIJUNLE] forked tun number %d \n", vpninfo->script_tun);
 
 	return openconnect_setup_tun_fd(vpninfo, fds[0]);
 }
@@ -572,6 +573,7 @@ int os_write_tun(struct openconnect_info *vpninfo, struct pkt *pkt)
 
 void os_shutdown_tun(struct openconnect_info *vpninfo)
 {
+  vpn_progress(vpninfo, PRG_INFO, "[LIJUNLE] tun number %d \n", vpninfo->script_tun);
 	if (vpninfo->script_tun) {
 		/* nuke the whole process group */
 		kill(-vpninfo->script_tun, SIGHUP);

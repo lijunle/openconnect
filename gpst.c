@@ -636,6 +636,7 @@ static int gpst_get_config(struct openconnect_info *vpninfo)
 
 	orig_path = vpninfo->urlpath;
 	vpninfo->urlpath = strdup("ssl-vpn/getconfig.esp");
+  // vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Submit getconfig URL %s with body %s \n", vpninfo->urlpath, request_body->data);
 	result = do_https_request(vpninfo, method, request_body_type, request_body,
 				  &xml_buf, 0);
 	free(vpninfo->urlpath);
@@ -1103,6 +1104,8 @@ int gpst_mainloop(struct openconnect_info *vpninfo, int *timeout, int readable)
 			break;
 		if (len < 0) {
 			vpn_progress(vpninfo, PRG_ERR, _("Packet receive error: %s\n"), strerror(-len));
+      vpn_progress(vpninfo, PRG_TRACE, "[LIJUNLE] Obtain cookie before do reconnect \n");
+      openconnect_obtain_cookie(vpninfo);
 			goto do_reconnect;
 		}
 		if (len < 16) {
@@ -1132,8 +1135,8 @@ int gpst_mainloop(struct openconnect_info *vpninfo, int *timeout, int readable)
 		vpninfo->ssl_times.last_rx = time(NULL);
 		switch (ethertype) {
 		case 0:
-			vpn_progress(vpninfo, PRG_DEBUG,
-				     _("Got GPST DPD/keepalive response\n"));
+			// vpn_progress(vpninfo, PRG_DEBUG,
+			//	     _("Got GPST DPD/keepalive response\n"));
 
 			if (one != 0 || zero != 0) {
 				vpn_progress(vpninfo, PRG_DEBUG,
@@ -1143,9 +1146,9 @@ int gpst_mainloop(struct openconnect_info *vpninfo, int *timeout, int readable)
 			continue;
 		case 0x0800:
 		case 0x86DD:
-			vpn_progress(vpninfo, PRG_TRACE,
-				     _("Received IPv%d data packet of %d bytes\n"),
-				     ethertype == 0x86DD ? 6 : 4, payload_len);
+			// vpn_progress(vpninfo, PRG_TRACE,
+			//	     _("Received IPv%d data packet of %d bytes\n"),
+			//	     ethertype == 0x86DD ? 6 : 4, payload_len);
 			vpninfo->cstp_pkt->len = payload_len;
 			queue_packet(&vpninfo->incoming_queue, vpninfo->cstp_pkt);
 			vpninfo->cstp_pkt = NULL;
@@ -1234,7 +1237,7 @@ int gpst_mainloop(struct openconnect_info *vpninfo, int *timeout, int readable)
 			break;
 		/* fall through */
 	case KA_DPD:
-		vpn_progress(vpninfo, PRG_DEBUG, _("Send GPST DPD/keepalive request\n"));
+		// vpn_progress(vpninfo, PRG_DEBUG, _("Send GPST DPD/keepalive request\n"));
 
 		vpninfo->current_ssl_pkt = (struct pkt *)&dpd_pkt;
 		goto handle_outgoing;
@@ -1256,9 +1259,9 @@ int gpst_mainloop(struct openconnect_info *vpninfo, int *timeout, int readable)
 		store_le32(this->gpst.hdr + 8, 1);
 		store_le32(this->gpst.hdr + 12, 0);
 
-		vpn_progress(vpninfo, PRG_TRACE,
-			     _("Sending IPv%d data packet of %d bytes\n"),
-			     (ethertype == 0x86DD ? 6 : 4), this->len);
+		//vpn_progress(vpninfo, PRG_TRACE,
+		//	     _("Sending IPv%d data packet of %d bytes\n"),
+		//	     (ethertype == 0x86DD ? 6 : 4), this->len);
 
 		goto handle_outgoing;
 	}

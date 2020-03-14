@@ -269,8 +269,8 @@ int openconnect_mainloop(struct openconnect_info *vpninfo,
 		if (did_work)
 			continue;
 
-		vpn_progress(vpninfo, PRG_TRACE,
-			     _("No work to do; sleeping for %d ms...\n"), timeout);
+		//vpn_progress(vpninfo, PRG_TRACE,
+		//	     _("No work to do; sleeping for %d ms...\n"), timeout);
 
 #ifdef _WIN32
 		if (vpninfo->dtls_monitored) {
@@ -316,8 +316,10 @@ int openconnect_mainloop(struct openconnect_info *vpninfo,
 	if (vpninfo->quit_reason && vpninfo->proto->vpn_close_session)
 		vpninfo->proto->vpn_close_session(vpninfo, vpninfo->quit_reason);
 
+  vpn_progress(vpninfo, PRG_INFO, _("[LIJUNLE] tun is up?\n"));
 	if (tun_is_up(vpninfo))
 		os_shutdown_tun(vpninfo);
+  vpn_progress(vpninfo, PRG_INFO, _("[LIJUNLE] process end\n"));
 	return ret < 0 ? ret : -EIO;
 }
 

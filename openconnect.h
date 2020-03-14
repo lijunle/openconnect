@@ -259,6 +259,7 @@ struct oc_auth_form {
 	char *error;
 	char *auth_id;
 	char *method;
+	char *request;
 	char *action;
 	struct oc_form_opt *opts;
 	struct oc_form_opt_select *authgroup_opt;
